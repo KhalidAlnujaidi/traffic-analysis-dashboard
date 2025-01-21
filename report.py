@@ -48,7 +48,7 @@ st.title('Riyadh Traffic Data Analysis Dashboard')
 
 # Directly load the CSV files
 # Make sure to replace these file paths with your actual file paths
-file_paths = ['/Users/khalid/Desktop/Work/Traffic Analysis/google maps/riyadh_traffic_analysis.csv']
+file_paths = ['riyadh_traffic_analysis.csv']
 
 # Read the CSV file into a dataframe
 df_traffic = pd.read_csv(file_paths[0])
