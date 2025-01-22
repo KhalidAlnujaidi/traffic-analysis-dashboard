@@ -118,6 +118,7 @@ else:
 # st.write("Filtered Dataframe after applying the selected ranges:")
 # st.dataframe(filtered_df)
 
+
 # If there are valid rows in the filtered dataframe
 if not filtered_df.empty:
     # Allow the user to select the origin from the filtered dataframe
@@ -131,23 +132,33 @@ if not filtered_df.empty:
         destination_df = filtered_df[filtered_df['Origin'] == origin_name]
         
         # Allow the user to select multiple destinations from the filtered dataframe
-        destination_names = st.multiselect("Select Destinations", destination_df['Destination'].unique())
+        destination_names = destination_df['Destination'].unique().tolist()
+        
+        # Add a "Select All" option at the beginning of the list
+        destination_names.insert(0, "Select All")
+        
+        selected_destinations = st.multiselect("Select Destinations", destination_names)
+
+        # If "Select All" is chosen, select all destinations automatically
+        if "Select All" in selected_destinations:
+            selected_destinations = destination_df['Destination'].unique().tolist()
 
         # Create a list to store map data for the arcs
         map_data = []
 
         # Loop through the selected destinations and get the coordinates
-        for destination_name in destination_names:
-            destination_coords = get_coordinates_from_stop_name(destination_name)
-            
-            if destination_coords:
-                map_data.append({
-                    'source_lat': origin_coords[0],
-                    'source_lon': origin_coords[1],
-                    'target_lat': destination_coords[0],
-                    'target_lon': destination_coords[1],
-                    'stop_name': f"{origin_name} -> {destination_name}"
-                })
+        for destination_name in selected_destinations:
+            if destination_name != "Select All":
+                destination_coords = get_coordinates_from_stop_name(destination_name)
+                
+                if destination_coords:
+                    map_data.append({
+                        'source_lat': origin_coords[0],
+                        'source_lon': origin_coords[1],
+                        'target_lat': destination_coords[0],
+                        'target_lon': destination_coords[1],
+                        'stop_name': f"{origin_name} -> {destination_name}"
+                    })
 
         # Create a DataFrame for the arcs
         if map_data:
@@ -179,8 +190,18 @@ if not filtered_df.empty:
             
             # Display the map in Streamlit
             st.pydeck_chart(deck)
+
+            # Display the filtered DataFrame
+            st.write("Filtered DataFrame based on selected Origin and Destinations:")
+            filtered_map_data_df = filtered_df[filtered_df['Origin'] == origin_name]
+            filtered_map_data_df = filtered_map_data_df[filtered_map_data_df['Destination'].isin(selected_destinations)]
+            filtered_map_data_df = filtered_map_data_df[['Origin', 'Destination', 'Driving Duration (Minutes)', 'Transit Duration (Minutes)', 'Time Saved (Minutes)', 'Transit Percentage Faster']]
+            st.dataframe(filtered_map_data_df)
         else:
             st.write("No destinations selected or valid coordinates for the selected destinations.")
+
+else:
+    st.write("No data available for mapping.")
 
 else:
     st.write("No data available for mapping.")
