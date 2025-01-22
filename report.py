@@ -120,50 +120,67 @@ else:
 
 # If there are valid rows in the filtered dataframe
 if not filtered_df.empty:
-    # Allow the user to select origin and destination from the filtered dataframe
+    # Allow the user to select the origin from the filtered dataframe
     origin_name = st.selectbox("Select Origin", filtered_df['Origin'].unique())
-    destination_name = st.selectbox("Select Destination", filtered_df['Destination'].unique())
     
-    # Get the coordinates for the origin and destination
+    # Get the coordinates for the origin
     origin_coords = get_coordinates_from_stop_name(origin_name)
-    destination_coords = get_coordinates_from_stop_name(destination_name)
     
-    if origin_coords and destination_coords:
-        # Create a deck.gl map (Kepler.gl-like visualization)
-        map_data = pd.DataFrame({
-            'source_lat': [origin_coords[0]],
-            'source_lon': [origin_coords[1]],
-            'target_lat': [destination_coords[0]],
-            'target_lon': [destination_coords[1]],
-            'stop_name': [f"{origin_name} -> {destination_name}"]
-        })
+    if origin_coords:
+        # Filter the dataframe to get all destinations for the selected origin
+        destination_df = filtered_df[filtered_df['Origin'] == origin_name]
         
-        # Define the ArcLayer with pydeck (for arc visualization)
-        arc_layer = pdk.Layer(
-            'ArcLayer',
-            map_data,
-            get_source_position=['source_lon', 'source_lat'],
-            get_target_position=['target_lon', 'target_lat'],
-            get_source_color=[255, 0, 0, 140],  # Red color for the origin
-            get_target_color=[0, 0, 255, 140],  # Blue color for the destination
-            get_width=5,
-            pickable=True
-        )
-        
-        # Define the deck (map)
-        deck = pdk.Deck(
-            layers=[arc_layer],
-            initial_view_state=pdk.ViewState(
-                latitude=origin_coords[0],
-                longitude=origin_coords[1],
-                zoom=12,
-                pitch=50  # Set pitch for the arc to be visible
-            ),
-            tooltip={"text": "{stop_name}"}
-        )
-        
-        # Display the map in Streamlit
-        st.pydeck_chart(deck)
+        # Allow the user to select multiple destinations from the filtered dataframe
+        destination_names = st.multiselect("Select Destinations", destination_df['Destination'].unique())
+
+        # Create a list to store map data for the arcs
+        map_data = []
+
+        # Loop through the selected destinations and get the coordinates
+        for destination_name in destination_names:
+            destination_coords = get_coordinates_from_stop_name(destination_name)
+            
+            if destination_coords:
+                map_data.append({
+                    'source_lat': origin_coords[0],
+                    'source_lon': origin_coords[1],
+                    'target_lat': destination_coords[0],
+                    'target_lon': destination_coords[1],
+                    'stop_name': f"{origin_name} -> {destination_name}"
+                })
+
+        # Create a DataFrame for the arcs
+        if map_data:
+            map_data_df = pd.DataFrame(map_data)
+
+            # Define the ArcLayer with pydeck (for arc visualization)
+            arc_layer = pdk.Layer(
+                'ArcLayer',
+                map_data_df,
+                get_source_position=['source_lon', 'source_lat'],
+                get_target_position=['target_lon', 'target_lat'],
+                get_source_color=[255, 0, 0, 140],  # Red color for the origin
+                get_target_color=[0, 0, 255, 140],  # Blue color for the destination
+                get_width=5,
+                pickable=True
+            )
+            
+            # Define the deck (map)
+            deck = pdk.Deck(
+                layers=[arc_layer],
+                initial_view_state=pdk.ViewState(
+                    latitude=origin_coords[0],
+                    longitude=origin_coords[1],
+                    zoom=12,
+                    pitch=50  # Set pitch for the arc to be visible
+                ),
+                tooltip={"text": "{stop_name}"}
+            )
+            
+            # Display the map in Streamlit
+            st.pydeck_chart(deck)
+        else:
+            st.write("No destinations selected or valid coordinates for the selected destinations.")
 
 else:
     st.write("No data available for mapping.")
