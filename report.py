@@ -118,7 +118,6 @@ else:
 # st.write("Filtered Dataframe after applying the selected ranges:")
 # st.dataframe(filtered_df)
 
-
 # If there are valid rows in the filtered dataframe
 if not filtered_df.empty:
     # Allow the user to select the origin from the filtered dataframe
@@ -199,9 +198,6 @@ if not filtered_df.empty:
             st.dataframe(filtered_map_data_df)
         else:
             st.write("No destinations selected or valid coordinates for the selected destinations.")
-
-else:
-    st.write("No data available for mapping.")
 
 else:
     st.write("No data available for mapping.")
