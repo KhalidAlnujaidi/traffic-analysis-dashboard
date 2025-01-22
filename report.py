@@ -15,7 +15,7 @@ def get_coordinates_from_stop_name(stop_name):
 
 
 # Read the JSON file into a DataFrame
-df = pd.read_json('/Users/khalid/Desktop/Work/Traffic Analysis/twitter and tom tom/outputs/stations.json')
+df = pd.read_json('stations.json')
 # Initialize an empty list to store stop details
 metro_stops_list = []
 
@@ -49,7 +49,7 @@ st.title('Riyadh Traffic Data Analysis Dashboard')
 
 # Directly load the CSV files
 # Make sure to replace these file paths with your actual file paths
-file_paths = ['/Users/khalid/Desktop/Work/Traffic Analysis/google maps/riyadh_traffic_analysis.csv']
+file_paths = ['riyadh_traffic_analysis.csv']
 
 # Read the CSV file into a dataframe
 df_traffic = pd.read_csv(file_paths[0])
