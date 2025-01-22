@@ -4,6 +4,7 @@ import folium
 from folium.plugins import MarkerCluster
 import numpy as np
 import streamlit.components.v1 as components 
+import pydeck as pdk  # For Kepler.gl maps
 
 # Function to get coordinates from the stop name
 def get_coordinates_from_stop_name(stop_name):
@@ -14,7 +15,7 @@ def get_coordinates_from_stop_name(stop_name):
 
 
 # Read the JSON file into a DataFrame
-df = pd.read_json('stations.json')
+df = pd.read_json('/Users/khalid/Desktop/Work/Traffic Analysis/twitter and tom tom/outputs/stations.json')
 # Initialize an empty list to store stop details
 metro_stops_list = []
 
@@ -48,7 +49,7 @@ st.title('Riyadh Traffic Data Analysis Dashboard')
 
 # Directly load the CSV files
 # Make sure to replace these file paths with your actual file paths
-file_paths = ['riyadh_traffic_analysis.csv']
+file_paths = ['/Users/khalid/Desktop/Work/Traffic Analysis/google maps/riyadh_traffic_analysis.csv']
 
 # Read the CSV file into a dataframe
 df_traffic = pd.read_csv(file_paths[0])
@@ -57,15 +58,15 @@ df_traffic = pd.read_csv(file_paths[0])
 filtered_df = df_traffic
 
 # 1. Filter by specific column ('Origin') with an "All" option
-column_name = 'Origin'  # Hardcode the column to 'origin'
-if column_name in filtered_df.columns:
-    unique_values = ['All'] + list(filtered_df[column_name].unique())  # Add 'All' option
-    selected_value = st.selectbox(f"Select value to filter by {column_name}", unique_values, index=0)
+# column_name = 'Origin'  # Hardcode the column to 'origin'
+# if column_name in filtered_df.columns:
+#     unique_values = ['All'] + list(filtered_df[column_name].unique())  # Add 'All' option
+#     selected_value = st.selectbox(f"Select value to filter by {column_name}", unique_values, index=0)
     
-    if selected_value != 'All':
-        filtered_df = filtered_df[filtered_df[column_name] == selected_value]
-else:
-    st.write(f"Column '{column_name}' not found in the dataframe.")
+#     if selected_value != 'All':
+#         filtered_df = filtered_df[filtered_df[column_name] == selected_value]
+# else:
+#     st.write(f"Column '{column_name}' not found in the dataframe.")
 
 # 2. Filter the boolean column 'Transit is Faster'
 if 'Transit is Faster' in filtered_df.columns:
@@ -114,35 +115,55 @@ else:
     st.write("One or both of the numerical columns ('Driving Distance (KM)', 'Transit Percentage Faster') are not available for filtering.")
 
 # Display the filtered dataframe
-st.write("Filtered Dataframe after applying the selected ranges:")
-st.dataframe(filtered_df)
+# st.write("Filtered Dataframe after applying the selected ranges:")
+# st.dataframe(filtered_df)
 
+# If there are valid rows in the filtered dataframe
 if not filtered_df.empty:
     # Allow the user to select origin and destination from the filtered dataframe
     origin_name = st.selectbox("Select Origin", filtered_df['Origin'].unique())
     destination_name = st.selectbox("Select Destination", filtered_df['Destination'].unique())
-
+    
     # Get the coordinates for the origin and destination
     origin_coords = get_coordinates_from_stop_name(origin_name)
     destination_coords = get_coordinates_from_stop_name(destination_name)
-
+    
     if origin_coords and destination_coords:
-        # Create a map centered around the origin
-        map_center = origin_coords  # Center the map at the origin location
-        m = folium.Map(location=map_center, zoom_start=12)
+        # Create a deck.gl map (Kepler.gl-like visualization)
+        map_data = pd.DataFrame({
+            'source_lat': [origin_coords[0]],
+            'source_lon': [origin_coords[1]],
+            'target_lat': [destination_coords[0]],
+            'target_lon': [destination_coords[1]],
+            'stop_name': [f"{origin_name} -> {destination_name}"]
+        })
+        
+        # Define the ArcLayer with pydeck (for arc visualization)
+        arc_layer = pdk.Layer(
+            'ArcLayer',
+            map_data,
+            get_source_position=['source_lon', 'source_lat'],
+            get_target_position=['target_lon', 'target_lat'],
+            get_source_color=[255, 0, 0, 140],  # Red color for the origin
+            get_target_color=[0, 0, 255, 140],  # Blue color for the destination
+            get_width=5,
+            pickable=True
+        )
+        
+        # Define the deck (map)
+        deck = pdk.Deck(
+            layers=[arc_layer],
+            initial_view_state=pdk.ViewState(
+                latitude=origin_coords[0],
+                longitude=origin_coords[1],
+                zoom=12,
+                pitch=50  # Set pitch for the arc to be visible
+            ),
+            tooltip={"text": "{stop_name}"}
+        )
+        
+        # Display the map in Streamlit
+        st.pydeck_chart(deck)
 
-        # Add markers for the origin and destination
-        folium.Marker(location=origin_coords, popup=f"Origin: {origin_name}", icon=folium.Icon(color='green')).add_to(m)
-        folium.Marker(location=destination_coords, popup=f"Destination: {destination_name}", icon=folium.Icon(color='red')).add_to(m)
-
-        # Draw a line between the origin and destination
-        folium.PolyLine([origin_coords, destination_coords], color='blue', weight=2.5, opacity=1).add_to(m)
-
-        # Display the map in Streamlit using HTML rendering
-        st.write("Route between Origin and Destination:")
-        map_html = m._repr_html_()  # Get the map as HTML
-        components.html(map_html, height=500)  # Display the map
-    else:
-        st.write("Coordinates for Origin or Destination not found.")
 else:
     st.write("No data available for mapping.")
